@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Dashboard</title>
+
+<link rel="stylesheet"
+href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<h2>Dashboard</h2>
+
+<a href="/tasks">Task Manager</a> |
+
+<a href="/logout">Logout</a>
+
+<hr>
+
+<h3>📊 Task Statistics</h3>
+
+<table border="1" cellpadding="10">
+
+<tr>
+<td><b>Total Tasks</b></td>
+<td>{{ total_tasks }}</td>
+</tr>
+
+<tr>
+<td><b>Completed Tasks</b></td>
+<td>{{ completed_tasks }}</td>
+</tr>
+
+<tr>
+<td><b>Pending Tasks</b></td>
+<td>{{ pending_tasks }}</td>
+</tr>
+
+<tr>
+<td><b>In Progress Tasks</b></td>
+<td>{{ inprogress_tasks }}</td>
+</tr>
+
+<tr>
+<td><b>Completion %</b></td>
+<td>{{ completion_rate }}%</td>
+</tr>
+
+</table>
+
+<hr>
+
+<h3>📅 Activity Heatmap</h3>
+
+<div id="heatmap"></div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+</html>

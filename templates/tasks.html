@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Tasks</title>
+
+<style>
+
+/* Priority Colors */
+
+.priority-low {
+    background-color: #d4edda;
+}
+
+.priority-medium {
+    background-color: #fff3cd;
+}
+
+.priority-high {
+    background-color: #f8d7da;
+}
+
+/* Overdue Row */
+
+.overdue {
+    background-color: #ffcccc;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>Task Manager</h2>
+
+<a href="/">Dashboard</a> |
+<a href="/logout">Logout</a>
+
+<hr>
+
+<h3>Create Task</h3>
+
+<form method="POST" action="/create_task">
+
+Title:<br>
+<input type="text" name="title" required><br><br>
+
+Description:<br>
+<textarea name="description"></textarea><br><br>
+
+Priority:<br>
+
+<select name="priority">
+
+<option value="Low">Low</option>
+<option value="Medium" selected>Medium</option>
+<option value="High">High</option>
+
+</select><br><br>
+
+Due Date:<br>
+<input type="date" name="due_date"><br><br>
+
+Assign To:<br>
+
+<select name="assigned_to">
+
+{% for user in users %}
+
+<option value="{{ user.id }}">
+{{ user.username }}
+</option>
+
+{% endfor %}
+
+</select><br><br>
+
+<button type="submit">
+Create Task
+</button>
+
+</form>
+
+<hr>
+
+<h3>All Tasks</h3>
+
+<table border="1" cellpadding="6">
+
+<tr>
+
+<th>Title</th>
+<th>Description</th>
+<th>Status</th>
+<th>Priority</th>
+<th>Due Date</th>
+<th>Assigned To</th>
+<th>Actions</th>
+
+</tr>
+
+{% for task in tasks %}
+
+<tr
+
+{% if task.due_date 
+   and task.due_date < current_date 
+   and task.status != "Completed" %}
+
+class="overdue"
+
+{% endif %}
+
+>
+
+<td>{{ task.title }}</td>
+
+<td>{{ task.description }}</td>
+
+<td>
+
+<!-- STATUS DROPDOWN -->
+
+<form method="POST"
+action="/update_status/{{ task.id }}">
+
+<select name="status">
+
+<option value="Pending"
+{% if task.status == "Pending" %}selected{% endif %}>
+Pending
+</option>
+
+<option value="In Progress"
+{% if task.status == "In Progress" %}selected{% endif %}>
+In Progress
+</option>
+
+<option value="Completed"
+{% if task.status == "Completed" %}selected{% endif %}>
+Completed
+</option>
+
+<option value="Blocked"
+{% if task.status == "Blocked" %}selected{% endif %}>
+Blocked
+</option>
+
+</select>
+
+<button type="submit">
+Update
+</button>
+
+</form>
+
+</td>
+
+<td
+
+{% if task.priority == "Low" %}
+class="priority-low"
+{% elif task.priority == "Medium" %}
+class="priority-medium"
+{% elif task.priority == "High" %}
+class="priority-high"
+{% endif %}
+
+>
+
+{{ task.priority }}
+
+</td>
+
+<td>
+
+{{ task.due_date }}
+
+</td>
+
+<td>
+
+{% for user in users %}
+    {% if user.id == task.assigned_to %}
+        {{ user.username }}
+    {% endif %}
+{% endfor %}
+
+</td>
+
+<td>
+
+<a href="/edit_task/{{ task.id }}">
+Edit
+</a>
+
+|
+
+<a href="/delete_task/{{ task.id }}">
+Delete
+</a>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+<br>
+
+<a href="/">
+Back to Dashboard
+</a>
+
+</body>
+</html>

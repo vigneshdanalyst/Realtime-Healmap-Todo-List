@@ -1,0 +1,56 @@
+#heatmap {
+    display: grid;
+    grid-template-columns: repeat(53, 15px);
+    grid-gap: 4px;
+}
+
+.day {
+    width: 15px;
+    height: 15px;
+    background-color: #ebedf0;
+    border-radius: 2px;
+    cursor: pointer;
+}
+#heatmap {
+    display: grid;
+    grid-template-columns: repeat(53, 15px);
+    grid-gap: 4px;
+}
+
+.day {
+    width: 15px;
+    height: 15px;
+    background-color: #ebedf0;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.level-1 { background-color: #c6e48b; }
+.level-2 { background-color: #7bc96f; }
+.level-3 { background-color: #239a3b; }
+.level-4 { background-color: #196127; }
+
+/* Completed */
+.level-1 {
+    background-color: #28a745;   /* Green */
+}
+
+/* In Progress */
+.level-2 {
+    background-color: #007bff;   /* Blue */
+}
+
+/* Overdue */
+.level-3 {
+    background-color: #dc3545;   /* Red */
+}
+
+/* Upcoming */
+.level-4 {
+    background-color: #ffc107;   /* Yellow */
+}
+
+/* Blocked */
+.level-5 {
+    background-color: #6f42c1;   /* Purple */
+}

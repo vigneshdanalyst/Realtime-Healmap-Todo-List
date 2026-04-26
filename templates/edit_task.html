@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Edit Task</title>
+</head>
+
+<body>
+
+<h2>Edit Task</h2>
+
+<form method="POST">
+
+Title:<br>
+<input type="text"
+name="title"
+value="{{ task.title }}"><br><br>
+
+Description:<br>
+<textarea name="description">
+{{ task.description }}
+</textarea><br><br>
+
+Priority:<br>
+
+<select name="priority">
+
+<option>Low</option>
+<option>Medium</option>
+<option>High</option>
+
+</select><br><br>
+
+Assign To:<br>
+
+<select name="assigned_to">
+
+{% for user in users %}
+
+<option value="{{ user.id }}">
+
+{{ user.username }}
+
+</option>
+
+{% endfor %}
+
+</select><br><br>
+
+<button type="submit">
+Update Task
+</button>
+
+</form>
+
+</body>
+</html>
