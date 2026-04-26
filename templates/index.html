@@ -1,190 +1,93 @@
-<!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-50">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Intelligence OS | Dashboard</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(226, 232, 240, 0.8); }
-        .sidebar-item-active { background: rgba(99, 102, 241, 0.1); color: #6366f1; border-right: 3px solid #6366f1; }
-        /* Prevent layout shift during JS injection */
-        #heatmap { min-height: 110px; }
-    </style>
-</head>
-<body class="h-full flex overflow-hidden">
+{% extends "layout.html" %}
 
-    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col hidden lg:flex">
-        <div class="p-8">
-            <div class="flex items-center gap-3">
-                <div class="h-9 w-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-indigo-200">
-                    Σ
-                </div>
-                <span class="text-xl font-extrabold tracking-tight text-slate-800 uppercase italic">Intel.io</span>
+{% block title %}Dashboard - {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Overview</p>
+        <h1>Dashboard</h1>
+        <p class="muted">A simple snapshot of your weekend project tasks.</p>
+    </div>
+    <a class="button primary" href="{{ url_for('tasks') }}">New Task</a>
+</section>
+
+<section class="stats-grid">
+    <article class="stat-card">
+        <p>Total tasks</p>
+        <strong>{{ total_tasks }}</strong>
+    </article>
+    <article class="stat-card">
+        <p>Completed</p>
+        <strong>{{ completed_tasks }}</strong>
+    </article>
+    <article class="stat-card">
+        <p>In progress</p>
+        <strong>{{ in_progress_tasks }}</strong>
+    </article>
+    <article class="stat-card warning">
+        <p>Overdue</p>
+        <strong>{{ overdue_tasks }}</strong>
+    </article>
+</section>
+
+<section class="content-grid">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Progress</p>
+                <h2>{{ completion_rate }}% complete</h2>
             </div>
         </div>
-
-        <nav class="flex-1 px-4 space-y-1">
-            <a href="/" class="flex items-center gap-3 px-4 py-3 text-sm font-bold sidebar-item-active rounded-lg transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-                Dashboard
-            </a>
-            <a href="/tasks" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-500 hover:bg-slate-50 rounded-lg transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                Operations
-            </a>
-        </nav>
-
-        <div class="p-6 mt-auto border-t border-slate-100">
-            <div class="flex items-center gap-4">
-                <div class="h-10 w-10 rounded-full bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center font-bold text-slate-500 text-xs">
-                    {{ current_user.username[:2].upper() }}
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-xs font-black text-slate-900 truncate">{{ current_user.username }}</p>
-                    <a href="/logout" class="text-[10px] font-bold text-red-500 hover:text-red-600 uppercase tracking-widest">Logout</a>
-                </div>
-            </div>
+        <div class="progress-track" aria-label="Completion rate">
+            <span style="width: {{ completion_rate }}%"></span>
         </div>
-    </aside>
+        <div class="mini-chart" id="taskChart" aria-label="Monthly task chart"></div>
+    </article>
 
-    <main class="flex-1 overflow-y-auto bg-slate-50/50">
-        <div class="max-w-7xl mx-auto p-10">
-            
-            <header class="mb-12 flex justify-between items-end">
-                <div>
-                    <span class="text-indigo-600 font-bold text-[10px] uppercase tracking-[0.2em] mb-2 block">System Analytics</span>
-                    <h1 class="text-4xl font-black text-slate-900 tracking-tight">Intelligence Dashboard</h1>
-                </div>
-                <div class="flex gap-4">
-                    <button class="px-6 py-3 bg-white border border-slate-200 text-slate-700 text-xs font-black rounded-xl shadow-sm hover:bg-slate-50 transition uppercase tracking-widest">
-                        Export Data
-                    </button>
-                    <a href="/tasks" class="px-6 py-3 bg-indigo-600 text-white text-xs font-black rounded-xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition uppercase tracking-widest">
-                        + New Objective
-                    </a>
-                </div>
-            </header>
-
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-                {% for label, val, color in [('Total Volume', total_tasks, 'indigo'), ('Completed', completed_tasks, 'emerald'), ('Queue', pending_tasks, 'amber'), ('Velocity', completion_rate ~ '%', 'indigo')] %}
-                <div class="bg-white p-7 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-{{ color }}-50 rounded-full transition-transform group-hover:scale-110"></div>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 relative z-10">{{ label }}</p>
-                    <h3 class="text-4xl font-black text-slate-900 relative z-10 tracking-tighter">{{ val }}</h3>
-                </div>
-                {% endfor %}
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Activity</p>
+                <h2>This year</h2>
             </div>
-
-            <div class="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col mb-12">
-                <div class="flex justify-between items-center mb-10">
-                    <div>
-                        <span class="text-indigo-600 font-bold text-[10px] uppercase tracking-[0.2em] mb-1 block">Chronological Flux</span>
-                        <h4 class="text-2xl font-black text-slate-800 tracking-tight">System Pulse <span id="current-year" class="text-slate-300 ml-2">2026</span></h4>
-                    </div>
-                    <div class="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl">
-                        <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Flux</span>
-                    </div>
-                </div>
-                
-                <div class="flex gap-6">
-                    <div class="flex flex-col justify-between text-[10px] font-black text-slate-300 uppercase pb-6 pt-10">
-                        <span>Mon</span>
-                        <span>Wed</span>
-                        <span>Fri</span>
-                    </div>
-
-                    <div class="flex-1 overflow-hidden">
-                        <div id="month-labels" class="grid grid-cols-12 mb-4 text-[11px] font-bold text-slate-400 uppercase tracking-tighter border-b border-slate-50 pb-2">
-                            </div>
-                        
-                        <div id="heatmap-container" class="relative overflow-x-auto pb-2">
-                            <div id="heatmap" class="grid grid-cols-53 gap-1.5">
-                                </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-8 pt-8 border-t border-slate-50 flex justify-between items-center">
-                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        Operational Density
-                    </div>
-                    <div class="flex items-center gap-2 text-[10px] font-bold text-slate-400">
-                        <span>Less Intensity</span>
-                        <div class="flex gap-1.5">
-                            <div class="w-3.5 h-3.5 bg-slate-100 rounded-sm"></div>
-                            <div class="w-3.5 h-3.5 bg-indigo-100 rounded-sm"></div>
-                            <div class="w-3.5 h-3.5 bg-indigo-300 rounded-sm"></div>
-                            <div class="w-3.5 h-3.5 bg-indigo-500 rounded-sm"></div>
-                        </div>
-                        <span>Peak Flux</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                <div class="flex justify-between items-center mb-10">
-                    <h4 class="text-lg font-black text-slate-800 tracking-tight">Productivity Velocity</h4>
-                    <span class="px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded-full uppercase tracking-widest">Real-time Performance</span>
-                </div>
-                <div class="h-[300px]">
-                    <canvas id="taskChart"></canvas>
-                </div>
-            </div>
+            <span id="current-year" class="pill"></span>
         </div>
-    </main>
+        <div class="heatmap-wrap">
+            <div id="month-labels" class="month-labels"></div>
+            <div id="heatmap" class="heatmap"></div>
+        </div>
+        <div class="legend">
+            <span>Less</span>
+            <i class="level-0"></i><i class="level-1"></i><i class="level-2"></i><i class="level-3"></i><i class="level-4"></i>
+            <span>More</span>
+        </div>
+    </article>
+</section>
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-    <script>
-        fetch("/chart-data")
-        .then(res => res.json())
-        .then(data => {
-            const ctx = document.getElementById("taskChart").getContext("2d");
-            
-            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-            gradient.addColorStop(0, 'rgba(99, 102, 241, 0.15)');
-            gradient.addColorStop(1, 'rgba(99, 102, 241, 0.01)');
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Recent</p>
+            <h2>Latest tasks</h2>
+        </div>
+        <a class="button ghost" href="{{ url_for('tasks') }}">View all</a>
+    </div>
+    <div class="task-list compact">
+        {% for task in recent_tasks %}
+        <article class="task-row">
+            <span class="priority-dot {{ task.priority|lower }}"></span>
+            <div>
+                <h3>{{ task.title }}</h3>
+                <p>{{ task.description or "No description yet." }}</p>
+            </div>
+            <span class="status-badge {{ task.status|lower|replace(' ', '-') }}">{{ task.status }}</span>
+        </article>
+        {% else %}
+        <div class="empty-state">No tasks yet. Create your first one from the Tasks page.</div>
+        {% endfor %}
+    </div>
+</section>
 
-            new Chart(ctx, {
-                type: "line",
-                data: {
-                    labels: data.labels,
-                    datasets: [{
-                        data: data.values,
-                        borderColor: "#6366f1",
-                        borderWidth: 5,
-                        pointRadius: 0,
-                        pointHoverRadius: 8,
-                        pointBackgroundColor: "#6366f1",
-                        pointBorderColor: "#fff",
-                        pointBorderWidth: 3,
-                        fill: true,
-                        backgroundColor: gradient,
-                        tension: 0.45
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { display: false, beginAtZero: true },
-                        x: { 
-                            grid: { display: false },
-                            ticks: { font: { weight: 'bold', size: 10 }, color: '#94a3b8' }
-                        }
-                    }
-                }
-            });
-        });
-    </script>
-</body>
-</html>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+{% endblock %}

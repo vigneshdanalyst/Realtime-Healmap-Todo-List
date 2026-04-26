@@ -1,33 +1,27 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Register</title>
-</head>
+{% extends "layout.html" %}
 
-<body>
+{% block title %}Register - {{ app_name }}{% endblock %}
 
-<h2>Register</h2>
-
-<form method="POST">
-
-Username:<br>
-<input type="text" name="username"><br><br>
-
-Email:<br>
-<input type="email" name="email"><br><br>
-
-Password:<br>
-<input type="password" name="password"><br><br>
-
-<button type="submit">
-Register
-</button>
-
-</form>
-
-<a href="/login">
-Already have account? Login
-</a>
-
-</body>
-</html>
+{% block content %}
+<section class="auth-card">
+    <p class="eyebrow">Start fresh</p>
+    <h1>Create your account</h1>
+    {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+    <form method="POST" class="auth-form">
+        <label>
+            <span>Username</span>
+            <input type="text" name="username" required>
+        </label>
+        <label>
+            <span>Email</span>
+            <input type="email" name="email" required>
+        </label>
+        <label>
+            <span>Password</span>
+            <input type="password" name="password" required>
+        </label>
+        <button class="button primary" type="submit">Create Account</button>
+    </form>
+    <p class="auth-link">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+</section>
+{% endblock %}

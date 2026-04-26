@@ -1,56 +1,51 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Edit Task</title>
-</head>
+{% extends "layout.html" %}
 
-<body>
+{% block title %}Edit Task - {{ app_name }}{% endblock %}
 
-<h2>Edit Task</h2>
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Edit</p>
+        <h1>Task details</h1>
+        <p class="muted">Update the task without losing your place.</p>
+    </div>
+    <a class="button ghost" href="{{ url_for('tasks') }}">Back to Tasks</a>
+</section>
 
-<form method="POST">
-
-Title:<br>
-<input type="text"
-name="title"
-value="{{ task.title }}"><br><br>
-
-Description:<br>
-<textarea name="description">
-{{ task.description }}
-</textarea><br><br>
-
-Priority:<br>
-
-<select name="priority">
-
-<option>Low</option>
-<option>Medium</option>
-<option>High</option>
-
-</select><br><br>
-
-Assign To:<br>
-
-<select name="assigned_to">
-
-{% for user in users %}
-
-<option value="{{ user.id }}">
-
-{{ user.username }}
-
-</option>
-
-{% endfor %}
-
-</select><br><br>
-
-<button type="submit">
-Update Task
-</button>
-
-</form>
-
-</body>
-</html>
+<section class="panel narrow">
+    <form method="POST" class="task-form single">
+        <label class="wide">
+            <span>Title</span>
+            <input type="text" name="title" value="{{ task.title }}" required>
+        </label>
+        <label class="wide">
+            <span>Description</span>
+            <textarea name="description" rows="4">{{ task.description or "" }}</textarea>
+        </label>
+        <label>
+            <span>Priority</span>
+            <select name="priority">
+                <option value="Low" {% if task.priority == 'Low' %}selected{% endif %}>Low</option>
+                <option value="Medium" {% if task.priority == 'Medium' %}selected{% endif %}>Medium</option>
+                <option value="High" {% if task.priority == 'High' %}selected{% endif %}>High</option>
+            </select>
+        </label>
+        <label>
+            <span>Due date</span>
+            <input type="date" name="due_date" value="{{ task.due_date or '' }}">
+        </label>
+        <label class="wide">
+            <span>Assigned to</span>
+            <select name="assigned_to">
+                {% for user in users %}
+                <option value="{{ user.id }}" {% if task.assigned_to == user.id %}selected{% endif %}>{{ user.username }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <div class="form-actions wide">
+            <a class="button ghost" href="{{ url_for('tasks') }}">Cancel</a>
+            <button class="button primary" type="submit">Save Changes</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

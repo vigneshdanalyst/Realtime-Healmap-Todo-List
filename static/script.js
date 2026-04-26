@@ -1,100 +1,94 @@
-/**
- * Intelligence OS: Pulse Engine 2.0
- * Unified 53-week chronological grid for 2026.
- */
-
-console.log("Intelligence OS: Pulse Engine Online");
-
 const heatmap = document.getElementById("heatmap");
 const monthLabels = document.getElementById("month-labels");
 const yearLabel = document.getElementById("current-year");
+const chart = document.getElementById("taskChart");
 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-/**
- * Renders the 53-week chronological pulse.
- * @param {Object} savedData - Map of day_index to intensity levels.
- */
-function renderOperationalPulse(savedData) {
+function renderActivityHeatmap(savedData) {
     if (!heatmap) return;
-    
-    // Reset display state to prevent duplication
+
     heatmap.innerHTML = "";
     if (monthLabels) monthLabels.innerHTML = "";
 
-    const targetYear = 2026; 
-    if (yearLabel) yearLabel.innerText = targetYear;
+    const targetYear = new Date().getFullYear();
+    const daysInYear = new Date(targetYear, 1, 29).getMonth() === 1 ? 366 : 365;
 
-    // 1. Generate Chronological Month Labels (X-Axis)
+    if (yearLabel) yearLabel.textContent = targetYear;
+
     if (monthLabels) {
-        months.forEach(m => {
-            const span = document.createElement("span");
-            span.innerText = m;
-            span.classList.add("text-left", "pl-1");
-            monthLabels.appendChild(span);
+        months.forEach((month) => {
+            const label = document.createElement("span");
+            label.textContent = month;
+            monthLabels.appendChild(label);
         });
     }
 
-    /**
-     * 2. Alignment Logic for 2026
-     * January 1st, 2026 is a Thursday.
-     * For a professional Monday-start grid, we offset the first 3 squares.
-     */
     const startDate = new Date(targetYear, 0, 1);
-    let startDay = startDate.getDay(); 
-    const offset = startDay === 0 ? 6 : startDay - 1; // Maps Sun(0) to 6, Mon(1) to 0
+    const startDay = startDate.getDay();
+    const offset = startDay === 0 ? 6 : startDay - 1;
 
-    // 3. Render Leading Padding (Invisible Coordinate Alignment)
-    for (let i = 0; i < offset; i++) {
+    for (let i = 0; i < offset; i += 1) {
         const empty = document.createElement("div");
-        empty.classList.add("day");
-        empty.style.opacity = "0"; 
-        empty.style.pointerEvents = "none";
+        empty.className = "day";
+        empty.style.visibility = "hidden";
         heatmap.appendChild(empty);
     }
 
-    // 4. Render Operational Days (365 Day Cycle)
-    for (let i = 0; i < 365; i++) {
-        const daySquare = document.createElement("div");
-        daySquare.classList.add("day");
-
-        // Calculate absolute date for tooltips
+    for (let i = 0; i < daysInYear; i += 1) {
+        const square = document.createElement("div");
+        const intensity = Number(savedData[i] || 0);
         const currentDate = new Date(targetYear, 0, i + 1);
-        const dateString = currentDate.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric', 
-            year: 'numeric' 
+        const dateString = currentDate.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
         });
 
-        // Pull intensity from PostgreSQL metrics
-        const intensity = savedData[i] || 0;
-        if (intensity > 0) {
-            daySquare.classList.add(`level-${intensity}`);
+        square.className = `day level-${Math.min(intensity, 5)}`;
+        square.title = `${dateString} - Level ${intensity}`;
+        heatmap.appendChild(square);
+    }
+}
+
+function renderTaskChart(data) {
+    if (!chart || !data || !Array.isArray(data.labels)) return;
+
+    chart.innerHTML = "";
+    const values = data.values || [];
+    const maxValue = Math.max(...values, 1);
+
+    data.labels.forEach((label, index) => {
+        const value = values[index] || 0;
+        const bar = document.createElement("div");
+        bar.className = "chart-bar";
+        bar.style.height = `${Math.max((value / maxValue) * 100, value ? 8 : 4)}%`;
+        bar.title = `${label}: ${value} task${value === 1 ? "" : "s"}`;
+
+        const caption = document.createElement("span");
+        caption.textContent = label;
+        bar.appendChild(caption);
+        chart.appendChild(bar);
+    });
+}
+
+async function loadDashboardData() {
+    try {
+        const [heatmapResponse, chartResponse] = await Promise.all([
+            fetch("/data"),
+            fetch("/chart-data"),
+        ]);
+
+        if (heatmapResponse.ok) {
+            renderActivityHeatmap(await heatmapResponse.json());
         }
 
-        // Professional SaaS Detail: Clean, date-centric tooltips
-        daySquare.setAttribute('title', `${dateString} • Level ${intensity}`);
-        
-        heatmap.appendChild(daySquare);
+        if (chartResponse.ok) {
+            renderTaskChart(await chartResponse.json());
+        }
+    } catch (error) {
+        console.error("Dashboard data failed to load", error);
     }
 }
 
-/**
- * Global Synchronizer: Fetches latest metrics from backend.
- */
-async function syncIntelligencePulse() {
-    try {
-        const response = await fetch("/data");
-        if (!response.ok) throw new Error("Flux Sync failure");
-        
-        const data = await response.json();
-        renderOperationalPulse(data);
-        
-        console.log("Intelligence OS: Pulse Synchronization Complete");
-    } catch (err) {
-        console.error("Critical Engine Error:", err);
-    }
-}
-
-// Global Initialization on DOM Ready
-document.addEventListener("DOMContentLoaded", syncIntelligencePulse);
+document.addEventListener("DOMContentLoaded", loadDashboardData);

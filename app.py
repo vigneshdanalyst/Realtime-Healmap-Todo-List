@@ -1,3 +1,6 @@
+import os
+from datetime import datetime, date
+
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
@@ -9,13 +12,13 @@ from flask_login import (
     current_user
 )
 from flask_bcrypt import Bcrypt
-from datetime import datetime, date
 
 app = Flask(__name__)
 
 # Security & Database Configuration
-app.config["SECRET_KEY"] = "supersecretkey"
-app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://postgres:dataengineer2026@localhost:5432/heatmap_db"
+os.makedirs(app.instance_path, exist_ok=True)
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///heatmap.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
@@ -40,8 +43,12 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+@app.context_processor
+def inject_app_name():
+    return {"app_name": "TaskBoard"}
+
 # ----------------------------
-# TASK TABLE (SaaS Grade)
+# TASK TABLE
 # ----------------------------
 
 class Task(db.Model):
@@ -54,7 +61,7 @@ class Task(db.Model):
     priority = db.Column(db.String(50), default="Medium")
     due_date = db.Column(db.Date, nullable=True)
     
-    # Collaboration Logic
+    # Collaboration
     created_by = db.Column(db.Integer, db.ForeignKey("user.id"))
     assigned_to = db.Column(db.Integer, db.ForeignKey("user.id"))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -74,17 +81,6 @@ class Heatmap(db.Model):
     value = db.Column(db.Integer, default=0)
 
 # ----------------------------
-# NOTIFICATION TABLE
-# ----------------------------
-
-class Notification(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    message = db.Column(db.String(255))
-    is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-# ----------------------------
 # LOGIC HELPERS
 # ----------------------------
 
@@ -96,7 +92,7 @@ def update_heatmap_for_today(user_id, status_type):
     record = Heatmap.query.filter_by(user_id=user_id, day_index=day_index).first()
 
     if record:
-        # Increment intensity for completions (Max 4)
+        # Intensity increment for completions (Max 4)
         if status_type == 1:
             record.value = min(record.value + 1, 4)
         else:
@@ -107,58 +103,69 @@ def update_heatmap_for_today(user_id, status_type):
     
     db.session.commit()
 
-def check_overdue_tasks(user_id):
-    today = date.today()
-    overdue_tasks = Task.query.filter(
-        Task.created_by == user_id,
-        Task.due_date < today,
-        Task.status != "Completed"
-    ).all()
+def can_access_task(task):
+    return task and (task.created_by == current_user.id or task.assigned_to == current_user.id)
 
-    if overdue_tasks:
-        update_heatmap_for_today(user_id, 3) # Red/Overdue
+def parse_due_date(value):
+    return datetime.strptime(value, "%Y-%m-%d").date() if value else None
+
+def status_to_heatmap_value(status):
+    return {
+        "Pending": 0,
+        "In Progress": 2,
+        "Completed": 1,
+        "Blocked": 5,
+    }.get(status, 0)
 
 # ----------------------------
 # CORE ROUTES
 # ----------------------------
 
-@app.route("/")
-@login_required
-def home():
-    check_overdue_tasks(current_user.id)
-    
-    # Dashboard Metrics
-    total_tasks = Task.query.filter_by(created_by=current_user.id).count()
-    completed = Task.query.filter_by(created_by=current_user.id, status="Completed").count()
-    pending = Task.query.filter_by(created_by=current_user.id, status="Pending").count()
-    inprogress = Task.query.filter_by(created_by=current_user.id, status="In Progress").count()
-    
-    rate = round((completed / total_tasks) * 100, 2) if total_tasks > 0 else 0
-
-    return render_template("index.html", 
-                           total_tasks=total_tasks, 
-                           completed_tasks=completed, 
-                           pending_tasks=pending, 
-                           inprogress_tasks=inprogress, 
-                           completion_rate=rate)
-
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    if current_user.is_authenticated:
+        return redirect(url_for("home"))
+
     if request.method == "POST":
-        hashed = bcrypt.generate_password_hash(request.form["password"]).decode("utf-8")
-        user = User(username=request.form["username"], email=request.form["email"], password=hashed)
+        username = request.form.get("username", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        if not username or not email or not password:
+            return render_template("register.html", error="All fields are required."), 400
+
+        existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
+        if existing_user:
+            return render_template("register.html", error="Username or email already exists."), 409
+
+        user = User(
+            username=username,
+            email=email,
+            password=bcrypt.generate_password_hash(password).decode("utf-8")
+        )
         db.session.add(user)
         db.session.commit()
-        return redirect(url_for("login"))
+        login_user(user)
+        return redirect(url_for("home"))
+
     return render_template("register.html")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for("home"))
+
     if request.method == "POST":
-        user = User.query.filter_by(email=request.form["email"]).first()
-        if user and bcrypt.check_password_hash(user.password, request.form["password"]):
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        user = User.query.filter_by(email=email).first()
+
+        if user and bcrypt.check_password_hash(user.password, password):
             login_user(user)
             return redirect(url_for("home"))
+
+        return render_template("login.html", error="Invalid email or password."), 401
+
     return render_template("login.html")
 
 @app.route("/logout")
@@ -166,6 +173,29 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for("login"))
+
+@app.route("/")
+@login_required
+def home():
+    # Dashboard Analytics
+    visible_tasks = Task.query.filter((Task.created_by == current_user.id) | (Task.assigned_to == current_user.id))
+    total_tasks = visible_tasks.count()
+    completed = visible_tasks.filter(Task.status == "Completed").count()
+    pending = visible_tasks.filter(Task.status == "Pending").count()
+    in_progress = visible_tasks.filter(Task.status == "In Progress").count()
+    overdue = visible_tasks.filter(Task.due_date < date.today(), Task.status != "Completed").count()
+    recent_tasks = visible_tasks.order_by(Task.created_at.desc()).limit(5).all()
+    
+    rate = round((completed / total_tasks) * 100, 2) if total_tasks > 0 else 0
+
+    return render_template("index.html", 
+                           total_tasks=total_tasks, 
+                           completed_tasks=completed, 
+                           pending_tasks=pending, 
+                           in_progress_tasks=in_progress,
+                           overdue_tasks=overdue,
+                           recent_tasks=recent_tasks,
+                           completion_rate=rate)
 
 @app.route("/tasks")
 @login_required
@@ -176,23 +206,27 @@ def tasks():
 
     query = Task.query.filter((Task.created_by == current_user.id) | (Task.assigned_to == current_user.id))
 
-    if filter_type == "completed": query = query.filter(Task.status == "Completed")
-    elif filter_type == "pending": query = query.filter(Task.status == "Pending")
-    elif filter_type == "overdue": query = query.filter(Task.due_date < today, Task.status != "Completed")
+    if filter_type == "completed":
+        query = query.filter(Task.status == "Completed")
+    elif filter_type == "pending":
+        query = query.filter(Task.status == "Pending")
+    elif filter_type == "overdue":
+        query = query.filter(Task.due_date < today, Task.status != "Completed")
 
-    return render_template("tasks.html", tasks=query.all(), users=users, current_date=today)
+    return render_template("tasks.html", tasks=query.order_by(Task.created_at.desc()).all(), users=users, active_filter=filter_type or "all")
 
 @app.route("/create_task", methods=["POST"])
 @login_required
 def create_task():
-    due = request.form["due_date"]
-    due_date = datetime.strptime(due, "%Y-%m-%d").date() if due else None
+    due = request.form.get("due_date")
+    due_date = parse_due_date(due)
+    assigned_to = request.form.get("assigned_to") or current_user.id
     
     task = Task(
-        title=request.form["title"],
-        description=request.form["description"],
-        priority=request.form["priority"],
-        assigned_to=request.form["assigned_to"],
+        title=request.form.get("title", "").strip(),
+        description=request.form.get("description", "").strip(),
+        priority=request.form.get("priority", "Medium"),
+        assigned_to=int(assigned_to),
         created_by=current_user.id,
         due_date=due_date
     )
@@ -200,19 +234,54 @@ def create_task():
     db.session.commit()
     return redirect(url_for("tasks"))
 
+@app.route("/edit_task/<int:task_id>", methods=["GET", "POST"])
+@login_required
+def edit_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    users = User.query.all()
+
+    # Only the creator or the assigned user can edit.
+    if not can_access_task(task):
+        return redirect(url_for("tasks"))
+
+    if request.method == "POST":
+        task.title = request.form.get("title", "").strip()
+        task.description = request.form.get("description", "").strip()
+        task.priority = request.form.get("priority", "Medium")
+        task.assigned_to = int(request.form.get("assigned_to") or current_user.id)
+        
+        due = request.form.get("due_date")
+        task.due_date = parse_due_date(due)
+
+        db.session.commit()
+        return redirect(url_for("tasks"))
+
+    return render_template("edit_task.html", task=task, users=users)
+
+@app.route("/delete_task/<int:task_id>")
+@login_required
+def delete_task(task_id):
+    task = Task.query.get(task_id)
+    # Only allow the creator to delete.
+    if task and task.created_by == current_user.id:
+        db.session.delete(task)
+        db.session.commit()
+    return redirect(url_for("tasks"))
+
 @app.route("/update_status/<int:task_id>", methods=["POST"])
 @login_required
 def update_status(task_id):
-    task = Task.query.get(task_id)
-    if task:
-        status = request.form["status"]
-        # Heatmap Mapping: 1:Success | 2:Active | 5:Blocked
-        if status == "Completed": update_heatmap_for_today(current_user.id, 1)
-        elif status == "In Progress": update_heatmap_for_today(current_user.id, 2)
-        elif status == "Blocked": update_heatmap_for_today(current_user.id, 5)
-        
+    task = Task.query.get_or_404(task_id)
+    if not can_access_task(task):
+        return redirect(url_for("tasks"))
+
+    status = request.form.get("status", "Pending")
+    allowed_statuses = {"Pending", "In Progress", "Completed", "Blocked"}
+    if status in allowed_statuses:
         task.status = status
         db.session.commit()
+        update_heatmap_for_today(current_user.id, status_to_heatmap_value(status))
+
     return redirect(url_for("tasks"))
 
 @app.route("/data")
@@ -224,12 +293,19 @@ def get_data():
 @app.route("/chart-data")
 @login_required
 def chart_data():
-    tasks = Task.query.filter_by(created_by=current_user.id, status="Completed").all()
-    counts = {}
-    for t in tasks:
-        day = t.created_at.strftime("%Y-%m-%d")
-        counts[day] = counts.get(day, 0) + 1
-    return jsonify({"labels": list(counts.keys()), "values": list(counts.values())})
+    labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    values = [0] * 12
+    tasks = Task.query.filter((Task.created_by == current_user.id) | (Task.assigned_to == current_user.id)).all()
+
+    for task in tasks:
+        month_index = task.created_at.month - 1
+        values[month_index] += 1
+
+    return jsonify({"labels": labels, "values": values})
+
+# ----------------------------
+# RUN ENGINE
+# ----------------------------
 
 if __name__ == "__main__":
     with app.app_context():

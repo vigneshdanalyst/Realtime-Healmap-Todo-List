@@ -1,134 +1,93 @@
-<!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-50">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Engine | Intelligence OS</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .task-card:hover { border-color: #6366f1; transform: translateY(-2px); }
-        .sidebar-item-active { background: rgba(99, 102, 241, 0.1); color: #6366f1; border-right: 3px solid #6366f1; }
-    </style>
-</head>
-<body class="h-full flex overflow-hidden">
+{% extends "layout.html" %}
 
-    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col hidden lg:flex">
-        <div class="p-8">
-            <div class="flex items-center gap-3">
-                <div class="h-9 w-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-indigo-200">Σ</div>
-                <span class="text-xl font-extrabold tracking-tight text-slate-800 uppercase italic">Intel.io</span>
-            </div>
+{% block title %}Tasks - {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Plan</p>
+        <h1>Tasks</h1>
+        <p class="muted">Create, assign, and update your project tasks.</p>
+    </div>
+    <div class="filter-tabs">
+        <a class="{% if active_filter == 'all' %}active{% endif %}" href="{{ url_for('tasks') }}">All</a>
+        <a class="{% if active_filter == 'pending' %}active{% endif %}" href="{{ url_for('tasks', filter='pending') }}">Pending</a>
+        <a class="{% if active_filter == 'completed' %}active{% endif %}" href="{{ url_for('tasks', filter='completed') }}">Done</a>
+        <a class="{% if active_filter == 'overdue' %}active{% endif %}" href="{{ url_for('tasks', filter='overdue') }}">Overdue</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">New</p>
+            <h2>Add a task</h2>
         </div>
-        <nav class="flex-1 px-4 space-y-1">
-            <a href="/" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-500 hover:bg-slate-50 rounded-lg transition-all">
-                <span></span> Dashboard
-            </a>
-            <a href="/tasks" class="flex items-center gap-3 px-4 py-3 text-sm font-bold sidebar-item-active rounded-lg transition-all">
-                <span></span> Operations
-            </a>
-        </nav>
-        <div class="p-6 mt-auto border-t border-slate-100">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Identity</p>
-            <div class="flex items-center gap-3">
-                <div class="h-8 w-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">{{ current_user.username[:1].upper() }}</div>
-                <span class="text-xs font-bold text-slate-700">{{ current_user.username }}</span>
-            </div>
-        </div>
-    </aside>
-
-    <main class="flex-1 overflow-y-auto">
-        <div class="max-w-6xl mx-auto p-10">
-            
-            <header class="mb-10 flex justify-between items-center">
-                <div>
-                    <h1 class="text-3xl font-black text-slate-900 tracking-tight">Task Engine</h1>
-                    <p class="text-sm text-slate-500 font-medium">Manage and deploy system objectives</p>
-                </div>
-                <div class="flex gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-                    <a href="/tasks" class="px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg bg-slate-100 text-slate-800">All</a>
-                    <a href="/tasks?filter=pending" class="px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg text-slate-400 hover:text-slate-600">Pending</a>
-                    <a href="/tasks?filter=overdue" class="px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg text-slate-400 hover:text-slate-600">Overdue</a>
-                </div>
-            </header>
-
-            <section class="mb-12 bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm">
-                <h4 class="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] mb-6">Create New Objective</h4>
-                <form method="POST" action="/create_task" class="grid grid-cols-1 md:grid-cols-6 gap-4">
-                    <div class="md:col-span-3">
-                        <input type="text" name="title" placeholder="Objective Title" required
-                               class="w-full bg-slate-50 border-none rounded-xl px-5 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 transition">
-                    </div>
-                    <div class="md:col-span-1">
-                        <select name="priority" class="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-bold text-slate-500">
-                            <option value="Low">Low Priority</option>
-                            <option value="Medium" selected>Medium</option>
-                            <option value="High">Critical</option>
-                        </select>
-                    </div>
-                    <div class="md:col-span-2">
-                        <select name="assigned_to" class="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-bold text-slate-500">
-                            {% for user in users %}
-                            <option value="{{ user.id }}">{{ user.username }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="md:col-span-4">
-                        <textarea name="description" placeholder="Brief technical description..." 
-                                  class="w-full bg-slate-50 border-none rounded-xl px-5 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500" rows="1"></textarea>
-                    </div>
-                    <div class="md:col-span-1">
-                        <input type="date" name="due_date" class="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-bold text-slate-500">
-                    </div>
-                    <div class="md:col-span-1">
-                        <button type="submit" class="w-full bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest py-4 rounded-xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition">Deploy</button>
-                    </div>
-                </form>
-            </section>
-
-            <div class="space-y-4">
-                {% for task in tasks %}
-                <div class="task-card bg-white p-6 rounded-2xl border border-slate-100 shadow-sm transition-all flex items-center gap-6">
-                    <div class="w-1 h-12 rounded-full {% if task.priority == 'High' %}bg-red-500{% elif task.priority == 'Medium' %}bg-amber-400{% else %}bg-slate-200{% endif %}"></div>
-                    
-                    <div class="flex-1">
-                        <div class="flex items-center gap-3 mb-1">
-                            <h3 class="text-sm font-black text-slate-800">{{ task.title }}</h3>
-                            <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-md tracking-tighter
-                                {% if task.status == 'Completed' %}bg-emerald-50 text-emerald-600{% elif task.status == 'Blocked' %}bg-purple-50 text-purple-600{% else %}bg-slate-100 text-slate-500{% endif %}">
-                                {{ task.status }}
-                            </span>
-                        </div>
-                        <p class="text-xs text-slate-400 font-medium truncate max-w-md">{{ task.description or 'No additional data provided.' }}</p>
-                    </div>
-
-                    <form method="POST" action="/update_status/{{ task.id }}" class="flex items-center gap-2">
-                        <select name="status" onchange="this.form.submit()" class="bg-slate-50 border-none rounded-lg text-[10px] font-black uppercase tracking-widest p-2 text-slate-500 focus:ring-0">
-                            <option value="Pending" {% if task.status == 'Pending' %}selected{% endif %}>Pending</option>
-                            <option value="In Progress" {% if task.status == 'In Progress' %}selected{% endif %}>In Progress</option>
-                            <option value="Completed" {% if task.status == 'Completed' %}selected{% endif %}>Completed</option>
-                            <option value="Blocked" {% if task.status == 'Blocked' %}selected{% endif %}>Blocked</option>
-                        </select>
-                    </form>
-
-                    <div class="text-right min-w-[100px]">
-                        <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Due Date</p>
-                        <p class="text-xs font-bold text-slate-600">{{ task.due_date or 'TBD' }}</p>
-                    </div>
-
-                    <div class="flex gap-2">
-                        <a href="/edit_task/{{ task.id }}" class="p-2 hover:bg-slate-50 rounded-lg transition text-slate-400 hover:text-indigo-600">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        </a>
-                        <a href="/delete_task/{{ task.id }}" class="p-2 hover:bg-red-50 rounded-lg transition text-slate-400 hover:text-red-500">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        </a>
-                    </div>
-                </div>
+    </div>
+    <form method="POST" action="{{ url_for('create_task') }}" class="task-form">
+        <label>
+            <span>Title</span>
+            <input type="text" name="title" placeholder="Build login page" required>
+        </label>
+        <label>
+            <span>Priority</span>
+            <select name="priority">
+                <option value="Low">Low</option>
+                <option value="Medium" selected>Medium</option>
+                <option value="High">High</option>
+            </select>
+        </label>
+        <label>
+            <span>Assigned to</span>
+            <select name="assigned_to">
+                {% for user in users %}
+                <option value="{{ user.id }}">{{ user.username }}</option>
                 {% endfor %}
+            </select>
+        </label>
+        <label class="wide">
+            <span>Description</span>
+            <textarea name="description" rows="3" placeholder="What needs to happen?"></textarea>
+        </label>
+        <label>
+            <span>Due date</span>
+            <input type="date" name="due_date">
+        </label>
+        <button class="button primary" type="submit">Add Task</button>
+    </form>
+</section>
+
+<section class="task-list">
+    {% for task in tasks %}
+    <article class="task-row">
+        <span class="priority-dot {{ task.priority|lower }}"></span>
+        <div class="task-main">
+            <div class="task-title-line">
+                <h3>{{ task.title }}</h3>
+                <span class="status-badge {{ task.status|lower|replace(' ', '-') }}">{{ task.status }}</span>
+            </div>
+            <p>{{ task.description or "No description yet." }}</p>
+            <div class="task-meta">
+                <span>Priority: {{ task.priority }}</span>
+                <span>Due: {{ task.due_date or "No date" }}</span>
+                {% if task.assignee %}<span>Assigned: {{ task.assignee.username }}</span>{% endif %}
             </div>
         </div>
-    </main>
-</body>
-</html>
+        <form method="POST" action="{{ url_for('update_status', task_id=task.id) }}" class="status-form">
+            <select name="status" onchange="this.form.submit()">
+                <option value="Pending" {% if task.status == 'Pending' %}selected{% endif %}>Pending</option>
+                <option value="In Progress" {% if task.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                <option value="Completed" {% if task.status == 'Completed' %}selected{% endif %}>Completed</option>
+                <option value="Blocked" {% if task.status == 'Blocked' %}selected{% endif %}>Blocked</option>
+            </select>
+        </form>
+        <div class="row-actions">
+            <a class="icon-button" href="{{ url_for('edit_task', task_id=task.id) }}" aria-label="Edit task">Edit</a>
+            <a class="icon-button danger" href="{{ url_for('delete_task', task_id=task.id) }}" aria-label="Delete task">Delete</a>
+        </div>
+    </article>
+    {% else %}
+    <div class="empty-state">No tasks match this view.</div>
+    {% endfor %}
+</section>
+{% endblock %}
