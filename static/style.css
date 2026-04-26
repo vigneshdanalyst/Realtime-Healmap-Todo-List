@@ -1,56 +1,156 @@
+/* ---------------------------------------------------------
+   GLOBAL FOUNDATION & TYPOGRAPHY
+   --------------------------------------------------------- */
+:root {
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --bg-main: #f8fafc;
+    --sidebar-bg: #ffffff;
+    --border-color: #e2e8f0;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --emerald-100: #dcfce7;
+    --emerald-300: #86efac;
+    --emerald-500: #22c55e;
+    --emerald-800: #166534;
+    --violet-500: #8b5cf6;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ---------------------------------------------------------
+   ADVANCED SAAS HEATMAP ENGINE
+   --------------------------------------------------------- */
+#heatmap-container {
+    padding: 1.5rem;
+    background: #ffffff;
+    border-radius: 1.5rem;
+    border: 1px solid var(--border-color);
+    overflow-x: auto;
+    width: 100%;
+}
+
+#month-labels {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    padding-left: 32px; /* Aligns with the heatmap content offset */
+    margin-bottom: 8px;
+    width: 100%;
+}
+
 #heatmap {
     display: grid;
-    grid-template-columns: repeat(53, 15px);
-    grid-gap: 4px;
+    /* 53 columns (weeks) by 7 rows (days) */
+    grid-template-columns: repeat(53, 1fr);
+    grid-template-rows: repeat(7, 1fr);
+    grid-auto-flow: column; /* Fills top-to-bottom first */
+    gap: 4px;
+    width: 100%;
+    min-height: 110px;
 }
 
 .day {
-    width: 15px;
-    height: 15px;
-    background-color: #ebedf0;
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    background-color: #f1f5f9;
     border-radius: 2px;
-    cursor: pointer;
-}
-#heatmap {
-    display: grid;
-    grid-template-columns: repeat(53, 15px);
-    grid-gap: 4px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: crosshair;
+    position: relative;
 }
 
-.day {
-    width: 15px;
-    height: 15px;
-    background-color: #ebedf0;
-    border-radius: 2px;
-    cursor: pointer;
+/* GitHub-Style Premium Green Scale */
+.level-1 { background-color: var(--emerald-100) !important; }
+.level-2 { background-color: var(--emerald-300) !important; }
+.level-3 { background-color: var(--emerald-500) !important; }
+.level-4 { background-color: var(--emerald-800) !important; }
+.level-5 { background-color: var(--violet-500) !important; } /* Blocked */
+
+/* High-Grade Hover State */
+.day:hover {
+    transform: scale(1.4);
+    z-index: 50;
+    box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
 }
 
-.level-1 { background-color: #c6e48b; }
-.level-2 { background-color: #7bc96f; }
-.level-3 { background-color: #239a3b; }
-.level-4 { background-color: #196127; }
+/* ---------------------------------------------------------
+   SAAS COMPONENT ARCHITECTURE
+   --------------------------------------------------------- */
 
-/* Completed */
-.level-1 {
-    background-color: #28a745;   /* Green */
+/* Glassmorphism Panels */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
-/* In Progress */
-.level-2 {
-    background-color: #007bff;   /* Blue */
+/* Task Cards */
+.task-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
 }
 
-/* Overdue */
-.level-3 {
-    background-color: #dc3545;   /* Red */
+.task-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-/* Upcoming */
-.level-4 {
-    background-color: #ffc107;   /* Yellow */
+/* Sidebar Styling */
+.sidebar-item-active {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+    border-right: 3px solid var(--primary);
 }
 
-/* Blocked */
-.level-5 {
-    background-color: #6f42c1;   /* Purple */
+/* Form Elements */
+input[type="text"], 
+input[type="date"], 
+select, 
+textarea {
+    border: 1px solid var(--border-color);
+    background-color: #ffffff;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* ---------------------------------------------------------
+   UTILITIES & TOOLTIPS
+   --------------------------------------------------------- */
+.shadow-premium {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Tooltip Simulation */
+.day[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
 }
