@@ -144,3 +144,10 @@ For local testing, the app has a development fallback secret key. For deployment
 - Do not commit `instance/heatmap.db`; it contains local user/task data.
 - Do not hardcode real passwords or production secrets in the repo.
 - If you forget your local password, delete `instance/heatmap.db` and register again.
+
+
+<img width="1917" height="994" alt="image" src="https://github.com/user-attachments/assets/93642352-f6dd-4446-b3f4-969418b69885" />
+
+<img width="1909" height="993" alt="image" src="https://github.com/user-attachments/assets/bf189a0a-6a02-41cd-b99a-9f5e08a9073f" />
+
+
