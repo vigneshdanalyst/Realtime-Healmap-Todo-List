@@ -26,8 +26,8 @@ TaskBoard is a simple Flask task tracker built as a weekend project. It includes
 Clone the project:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
-cd YOUR_REPO_NAME
+git clone https://github.com/vigneshdanalyst/Realtime-Healmap-Todo-List.git
+
 ```
 
 Create and activate a virtual environment:
