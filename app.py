@@ -182,6 +182,36 @@ def check_overdue_tasks(user_id):
             user_id,
             3   # Red
         )
+
+# ----------------------------
+# NOTIFICATION TABLE
+# ----------------------------
+
+class Notification(db.Model):
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id")
+    )
+
+    message = db.Column(
+        db.String(255)
+    )
+
+    is_read = db.Column(
+        db.Boolean,
+        default=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
 # ----------------------------
 # ROUTES
 # ----------------------------
@@ -311,14 +341,51 @@ def logout():
 @login_required
 def tasks():
 
-    # Show only user's tasks (recommended)
-    all_tasks = Task.query.filter_by(
-        created_by=current_user.id
-    ).all()
+    filter_type = request.args.get("filter")
 
     users = User.query.all()
 
     today = date.today()
+
+    # Default → show all user tasks
+
+    query = Task.query.filter(
+        (Task.created_by == current_user.id) |
+        (Task.assigned_to == current_user.id)
+    )
+
+    if filter_type == "my":
+
+        query = query.filter(
+            Task.created_by == current_user.id
+        )
+
+    elif filter_type == "assigned":
+
+        query = query.filter(
+            Task.assigned_to == current_user.id
+        )
+
+    elif filter_type == "completed":
+
+        query = query.filter(
+            Task.status == "Completed"
+        )
+
+    elif filter_type == "pending":
+
+        query = query.filter(
+            Task.status == "Pending"
+        )
+
+    elif filter_type == "overdue":
+
+        query = query.filter(
+            Task.due_date < today,
+            Task.status != "Completed"
+        )
+
+    all_tasks = query.all()
 
     return render_template(
         "tasks.html",
@@ -515,6 +582,37 @@ def update_heatmap():
     db.session.commit()
 
     return jsonify({"status": "success"})
+
+@app.route("/chart-data")
+@login_required
+def chart_data():
+
+    tasks = Task.query.filter_by(
+        created_by=current_user.id,
+        status="Completed"
+    ).all()
+
+    date_counts = {}
+
+    for task in tasks:
+
+        if task.created_at:
+
+            day = task.created_at.strftime("%Y-%m-%d")
+
+            if day in date_counts:
+                date_counts[day] += 1
+            else:
+                date_counts[day] = 1
+
+    labels = list(date_counts.keys())
+
+    values = list(date_counts.values())
+
+    return jsonify({
+        "labels": labels,
+        "values": values
+    })
 
 # ----------------------------
 # RUN APP
